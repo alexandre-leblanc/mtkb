@@ -1,0 +1,135 @@
+MULTI-TAB KIOSK BROWSER
+CUSTOM SOURCE-AVAILABLE NON-COMMERCIAL LICENSE
+
+Copyright © 2026 Alex LeBlanc. All rights reserved.
+
+Version 1.0
+Effective date: October 30, 2026
+
+
+1. DEFINITIONS
+
+For the purposes of this license:
+
+"Software" means Multi-Tab Kiosk Browser, including its source code, documentation, and associated original files, together with any modifications or derivative versions of those materials.
+
+"Copyright Holder" means Alex LeBlanc, the original copyright holder of the Software.
+
+"Non-Commercial Use" means use that is not primarily intended for or directed toward commercial advantage, monetary compensation, or the operation of a commercial enterprise.
+
+"Government Organization" means a government department, ministry, agency, municipality, or other government body, including an entity owned or controlled by government, when acting in its official capacity.
+
+
+2. PERMITTED NON-COMMERCIAL USE
+
+Subject to the conditions of this license, the Copyright Holder grants permission to use, reproduce, modify, and distribute the Software, free of charge, for the following purposes:
+
+1. Personal, private, and hobby use by individuals.
+2. Use by registered charitable organizations and non-profit organizations for their non-commercial activities.
+3. Use by educational institutions for educational, administrative, and research purposes that are non-commercial.
+4. Use by public research organizations for non-commercial research activities.
+5. Personal use by government employees, provided that the use is independent of their official duties and is not undertaken on behalf of a Government Organization.
+
+An eligible organization does not lose permission for otherwise permitted non-commercial use merely because it receives government grants, public funding, donations, sponsorships, or other external financial support.
+
+Eligibility depends on the nature and purpose of the Software's use, not solely on the organization's funding sources or legal status.
+
+These permissions do not extend to commercial activities or deployments undertaken on behalf of a commercial enterprise or Government Organization merely because they are operated by an otherwise eligible individual or organization.
+
+
+3. COMMERCIAL AND GOVERNMENT USE
+
+The following uses are not permitted without a separate written commercial license from the Copyright Holder:
+
+1. Use by for-profit businesses or commercial enterprises, including internal business operations.
+2. Use in products, services, or systems offered for sale, provided commercially, or used to generate commercial revenue.
+3. Official use by Government Organizations, including public-facing kiosks, information displays, internal systems, and other government deployments.
+4. Use by contractors, consultants, or service providers acting on behalf of a commercial enterprise or Government Organization in connection with a deployment that would otherwise require a commercial license.
+5. Selling the Software, charging for access to it, or bundling it with a paid product or service.
+
+A charity, non-profit organization, educational institution, or public research organization may not rely on the permissions in Section 2 when the Software is being deployed or operated on behalf of a commercial enterprise or Government Organization.
+
+The fact that a deployment is free to its end users, receives public funding, or is operated by an otherwise eligible organization does not, by itself, make a deployment permitted under this license.
+
+Commercial permission must be obtained separately and in writing from the Copyright Holder.
+
+
+4. REDISTRIBUTION
+
+You may redistribute unmodified copies of the Software free of charge, provided that:
+
+- This license is included in the redistributed copy.
+- Existing copyright notices and attribution are preserved.
+- The redistribution does not remove or circumvent the restrictions in this license.
+- You do not imply that the Copyright Holder endorses your redistribution.
+
+You may not sell copies of the Software or charge a license or access fee for it without separate written permission.
+
+
+5. MODIFICATION AND DERIVATIVE WORKS
+
+You may modify the Software and distribute modified versions free of charge for permitted non-commercial purposes.
+
+When distributing a modified version:
+
+- You must retain the original copyright notice and include this license.
+- You must clearly identify that the Software has been modified.
+- You must not represent your modified version as the original, unmodified release.
+- You must not claim to be the original author of the Software.
+- You must not imply that the Copyright Holder endorses or supports your modifications.
+- You must preserve the non-commercial and other restrictions of this license for the original Software and any derivative version distributed under this license.
+
+You may identify yourself as the author of your own modifications, but not as the original author of the Software.
+
+
+6. ATTRIBUTION
+
+Any redistribution or public distribution of the Software, including modified versions, must include appropriate attribution substantially in the following form:
+
+Multi-Tab Kiosk Browser
+Original software copyright © 2026 Alex LeBlanc.
+Source: https://github.com/alexandre-leblanc/multi-tab-kiosk-browser
+
+Attribution must be reasonably visible in the accompanying documentation, license notices, or other materials distributed with the Software.
+
+
+7. THIRD-PARTY COMPONENTS
+
+The Software may include or depend on third-party software, libraries, and other components.
+
+Such components remain subject to their own copyright notices and license terms. This license does not replace, override, or grant additional rights to third-party components.
+
+
+8. TERMINATION
+
+The permissions granted under this license automatically terminate if you fail to comply with its terms.
+
+Upon termination, you must stop using and distributing the Software unless and until your rights are reinstated in writing by the Copyright Holder.
+
+
+9. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, OR THAT THE SOFTWARE WILL OPERATE WITHOUT INTERRUPTION OR ERROR.
+
+YOU ASSUME ALL RESPONSIBILITY AND RISK ARISING FROM THE USE OF THE SOFTWARE.
+
+
+10. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR ANY DAMAGES ARISING OUT OF OR RELATED TO THE SOFTWARE OR ITS USE, INCLUDING DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR OTHER DAMAGES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+Nothing in this license excludes or limits liability where such exclusion or limitation is prohibited by applicable law.
+
+
+11. GOVERNING LAW
+
+This license is governed by the laws of the Province of Ontario and the applicable laws of Canada.
+
+The parties submit to the jurisdiction of the courts of the Province of Ontario for disputes arising under this license.
+
+
+12. RESERVATION OF RIGHTS
+
+All rights not expressly granted under this license are reserved by the Copyright Holder.
+
+This is a custom source-available license. It is not an OSI-approved open-source license. Commercial use requires separate written permission.
