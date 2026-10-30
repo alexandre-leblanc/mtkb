@@ -1,0 +1,23 @@
+{
+  "name": "multi-tab-kiosk-browser",
+  "productName": "Multi-Tab Kiosk Browser",
+  "version": "1.0.0",
+  "description": "A configurable multi-tab browser for kiosk and dashboard applications",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "electron",
+    "kiosk",
+    "browser",
+    "multi-tab",
+    "dashboard"
+  ],
+  "author": "Alex LeBlanc",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "33.0.0"
+  }
+}

@@ -1,0 +1,36 @@
+# Personal configuration
+/config.json
+
+# Browser profiles and website data
+/data/
+
+# Installed dependencies
+/node_modules/
+
+# Previous release/staging artifacts
+/release/
+
+# Build output
+/dist/
+/build/
+/out/
+
+# Packaged installers
+*.deb
+*.AppImage
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.*
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.idea/

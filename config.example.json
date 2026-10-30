@@ -1,0 +1,75 @@
+{
+  "tabs": [
+    {
+      "id": "example1",
+      "name": "Example Website",
+      "url": "https://example.com",
+      "localIcon": "icons/example1.png",
+      "iconPreference": "local"
+    },
+    {
+      "id": "example2",
+      "name": "Another Website",
+      "url": "https://example.org",
+      "localIcon": "icons/example2.png",
+      "iconPreference": "local"
+    },
+    {
+      "id": "example3",
+      "name": "Example Service 3",
+      "url": "https://example.com",
+      "iconPreference": "website"
+    },
+    {
+      "id": "example4",
+      "name": "Example Service 4",
+      "url": "https://example.com",
+      "iconPreference": "website"
+    },
+    {
+      "id": "example5",
+      "name": "Example Service 5",
+      "url": "https://example.com",
+      "iconPreference": "website"
+    },
+    {
+      "id": "example6",
+      "name": "Example Service 6",
+      "url": "https://example.com",
+      "iconPreference": "website"
+    },
+    {
+      "id": "example7",
+      "name": "Example Service 7",
+      "url": "https://example.com",
+      "iconPreference": "website"
+    }
+  ],
+  "defaultTheme": "dark",
+  "themes": {
+    "dark": {
+      "toolbarBackground": "#181818",
+      "textColor": "#cccccc",
+      "navBackground": "#252525",
+      "navBorder": "#383838",
+      "navActiveBackground": "#3a3a3a",
+      "tabBackground": "#222222",
+      "tabTextColor": "#999999",
+      "selectedTabBackground": "#0066cc",
+      "selectedTabTextColor": "#ffffff",
+      "separatorColor": "#333333"
+    },
+    "light": {
+      "toolbarBackground": "#f0f0f0",
+      "textColor": "#333333",
+      "navBackground": "#ffffff",
+      "navBorder": "#cccccc",
+      "navActiveBackground": "#dddddd",
+      "tabBackground": "#e2e2e2",
+      "tabTextColor": "#444444",
+      "selectedTabBackground": "#0066cc",
+      "selectedTabTextColor": "#ffffff",
+      "separatorColor": "#cccccc"
+    }
+  }
+}

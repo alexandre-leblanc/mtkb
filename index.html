@@ -1,0 +1,487 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --toolbar-bg: #181818;
+      --text-color: #cccccc;
+      --nav-bg: #252525;
+      --nav-border: #383838;
+      --nav-active-bg: #3a3a3a;
+      --tab-bg: #222222;
+      --tab-text: #999999;
+      --selected-tab-bg: #0066cc;
+      --selected-tab-text: #ffffff;
+      --separator-color: #333333;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #0b0b0b;
+    }
+
+    #top-bar {
+      height: 40px;
+      width: 100%;
+      background: var(--toolbar-bg);
+      display: flex;
+      align-items: center;
+      padding: 4px 8px;
+      gap: 6px;
+      border-bottom: 1px solid var(--separator-color);
+    }
+
+    .nav-btn, .theme-btn, .mute-btn {
+      height: 30px;
+      flex: 0 0 auto;
+      padding: 0 10px;
+      background: var(--nav-bg);
+      color: var(--text-color);
+      border: 1px solid var(--nav-border);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+
+    .nav-btn:active, .theme-btn:active, .mute-btn:active {
+      background: var(--nav-active-bg);
+    }
+
+    .theme-btn, .mute-btn {
+      width: 34px;
+      padding: 0;
+      font-size: 18px;
+    }
+
+    .mute-btn svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .separator {
+      width: 1px;
+      height: 22px;
+      flex: 0 0 auto;
+      background: var(--separator-color);
+      margin: 0 4px;
+    }
+
+    #tabs-container {
+      display: flex;
+      flex: 1 1 0;
+      min-width: 0;
+      height: 30px;
+      gap: 6px;
+    }
+
+    .tab-button {
+      flex: 1 1 0;
+      min-width: 0;
+      height: 30px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 4px;
+      background: var(--tab-bg);
+      color: var(--tab-text);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      touch-action: manipulation;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .tab-button.active {
+      background: var(--selected-tab-bg);
+      color: var(--selected-tab-text);
+    }
+
+    .tab-icon {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+      object-fit: contain;
+      display: none;
+    }
+
+    .tab-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+
+	.audio-indicator {
+      display: none;
+      flex: 0 0 auto;
+      width: 15px;
+      height: 15px;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-color);
+    }
+
+    .audio-indicator.playing {
+      display: inline-flex;
+    }
+
+    .audio-indicator svg {
+      width: 15px;
+      height: 15px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    #content {
+      width: 100%;
+      height: calc(100% - 40px);
+      background: #0b0b0b;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="top-bar">
+    <button class="nav-btn" id="back" title="Back">&#9664;</button>
+    <button class="nav-btn" id="forward" title="Forward">&#9654;</button>
+    <button class="nav-btn" id="refresh" title="Refresh">&#8635;</button>
+    <button class="nav-btn" id="home" title="Home">&#8962;</button>
+
+    <div class="separator"></div>
+    <div id="tabs-container"></div>
+
+    <button class="theme-btn" id="theme-toggle"
+            title="Switch theme" aria-label="Switch theme">☀</button>
+
+	<button class="mute-btn" id="mute-toggle" title="Mute all tabs" aria-label="Mute all tabs">
+      <svg id="mute-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+        <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+        <path d="M18.5 5.5a9 9 0 0 1 0 13"></path>
+      </svg>
+    </button>
+
+
+  </div>
+
+  <div id="content"></div>
+
+  <script>
+    let config;
+    let currentTheme;
+
+    const iconStates = new Map();
+    const audioIndicators = new Map();
+
+    const muteButton = document.getElementById('mute-toggle');
+    const muteIcon = document.getElementById('mute-icon');
+
+    function applyTheme(themeName) {
+      const theme = config.themes[themeName];
+      if (!theme) return;
+
+      currentTheme = themeName;
+
+      const root = document.documentElement;
+      root.style.setProperty('--toolbar-bg', theme.toolbarBackground);
+      root.style.setProperty('--text-color', theme.textColor);
+      root.style.setProperty('--nav-bg', theme.navBackground);
+      root.style.setProperty('--nav-border', theme.navBorder);
+      root.style.setProperty('--nav-active-bg', theme.navActiveBackground);
+      root.style.setProperty('--tab-bg', theme.tabBackground);
+      root.style.setProperty('--tab-text', theme.tabTextColor);
+      root.style.setProperty('--selected-tab-bg', theme.selectedTabBackground);
+      root.style.setProperty('--selected-tab-text', theme.selectedTabTextColor);
+      root.style.setProperty('--separator-color', theme.separatorColor);
+
+      const toggle = document.getElementById('theme-toggle');
+      toggle.textContent = themeName === 'dark' ? '☀' : '☾';
+      toggle.title = themeName === 'dark'
+        ? 'Switch to light theme'
+        : 'Switch to dark theme';
+      toggle.setAttribute('aria-label', toggle.title);
+    }
+
+    function makeCandidates(state) {
+      const local = state.localIcon && !state.localFailed
+        ? [{ src: state.localIcon, type: 'local' }]
+        : [];
+
+      const website = state.websiteUrls.map(src => ({
+        src,
+        type: 'website'
+      }));
+
+      return state.preference === 'local'
+        ? [...local, ...website]
+        : [...website, ...local];
+    }
+
+    function loadCandidates(state, candidates) {
+      state.candidates = candidates;
+      state.index = 0;
+      loadNextCandidate(state);
+    }
+
+    function loadNextCandidate(state) {
+      if (state.index >= state.candidates.length) {
+        state.img.style.display = 'none';
+        state.currentCandidate = null;
+        return;
+      }
+
+      const candidate = state.candidates[state.index];
+      state.currentCandidate = candidate;
+
+      state.img.onload = () => {
+        state.img.style.display = 'block';
+      };
+
+      state.img.onerror = () => {
+        window.electronAPI.logFaviconError({
+          tab: state.tabId,
+          url: candidate.src,
+          type: candidate.type
+        });
+
+        if (candidate.type === 'local') {
+          state.localFailed = true;
+          loadCandidates(state, makeCandidates(state));
+          return;
+        }
+
+        state.index++;
+        loadNextCandidate(state);
+      };
+
+      if (candidate.type === 'local') {
+        state.img.src = candidate.src;
+      } else {
+        window.electronAPI.fetchFaviconData(candidate.src).then(dataUrl => {
+          // Ignore results if another favicon has since been selected.
+          if (state.currentCandidate !== candidate) return;
+
+          if (dataUrl) {
+            state.img.src = dataUrl;
+          } else {
+            state.index++;
+            loadNextCandidate(state);
+          }
+        }).catch(() => {
+          if (state.currentCandidate !== candidate) return;
+
+          state.index++;
+          loadNextCandidate(state);
+        });
+      }
+    }
+
+    function getFaviconFallbacks(urls) {
+      const candidates = [...new Set(urls || [])];
+
+      // If the page reported any favicons, derive its origin and try
+      // the conventional favicon location as a final fallback.
+      if (candidates.length > 0) {
+        try {
+          const origin = new URL(candidates[0]).origin;
+          candidates.push(`${origin}/favicon.ico`);
+        } catch {}
+      }
+
+      return [...new Set(candidates)];
+    }
+
+    function updateWebsiteFavicons(id, urls) {
+      const state = iconStates.get(id);
+      if (!state) return;
+
+      state.websiteUrls = getFaviconFallbacks(urls);
+
+      // Don't replace a working local icon when local is preferred.
+      if (
+        state.preference === 'local' &&
+        state.localIcon &&
+        !state.localFailed &&
+        state.currentCandidate?.type === 'local'
+      ) {
+        return;
+      }
+
+      loadCandidates(state, makeCandidates(state));
+    }
+
+	function setTabAudioIndicator(id, audible) {
+      const indicator = audioIndicators.get(id);
+      if (!indicator) return;
+
+      indicator.classList.toggle('playing', Boolean(audible));
+    }
+
+    function updateMuteButton(muted) {
+      muteButton.classList.toggle('muted', muted);
+      muteButton.title = muted ? 'Unmute all tabs' : 'Mute all tabs';
+      muteButton.setAttribute(
+        'aria-label',
+        muted ? 'Unmute all tabs' : 'Mute all tabs'
+      );
+
+      muteIcon.innerHTML = muted
+        ? '<path d="M11 5 6 9H3v6h3l5 4V5Z"></path><path d="m16 9 5 6"></path><path d="m21 9-5 6"></path>'
+            : '<path d="M11 5 6 9H3v6h3l5 4V5Z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path>';
+    }
+
+    async function init() {
+      config = await window.electronAPI.getConfig();
+
+      const savedTheme = await window.electronAPI.getTheme();
+      applyTheme(savedTheme);
+
+      const tabsContainer = document.getElementById('tabs-container');
+
+      config.tabs.forEach((tab, index) => {
+        const button = document.createElement('button');
+        button.className =
+          'tab-button' + (index === 0 ? ' active' : '');
+        button.title = tab.name;
+
+        const icon = document.createElement('img');
+        icon.className = 'tab-icon';
+        icon.alt = '';
+
+        const label = document.createElement('span');
+        label.className = 'tab-label';
+        label.textContent = tab.name;
+
+
+
+        const audioIndicator = document.createElement('span');
+        audioIndicator.className = 'audio-indicator';
+        audioIndicator.title = 'Playing audio';
+        audioIndicator.setAttribute('aria-label', 'Playing audio');
+        audioIndicator.innerHTML = `
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+            <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+          </svg>
+        `;
+
+        button.append(icon, label, audioIndicator);
+        audioIndicators.set(tab.id, audioIndicator);
+
+
+
+
+
+        tabsContainer.appendChild(button);
+
+        const state = {
+          img: icon,
+          localIcon: tab.localIconDataUrl || null,
+          preference: tab.iconPreference || 'website',
+          websiteUrls: [],
+          localFailed: false,
+          candidates: [],
+          index: 0,
+          currentCandidate: null,
+		  tabId: tab.id
+        };
+
+        iconStates.set(tab.id, state);
+
+        // Show a local fallback immediately while waiting for the site icon.
+        if (state.localIcon) {
+          loadCandidates(state, makeCandidates(state));
+        }
+
+        button.addEventListener('click', async () => {
+          await window.electronAPI.activateTab(tab.id);
+
+          document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active');
+          });
+
+          button.classList.add('active');
+        });
+      });
+
+      window.electronAPI.onFaviconUpdated(({ id, urls }) => {
+        updateWebsiteFavicons(id, urls);
+      });
+
+      document.getElementById('back').addEventListener(
+        'click', () => window.electronAPI.goBack()
+      );
+
+      document.getElementById('forward').addEventListener(
+        'click', () => window.electronAPI.goForward()
+      );
+
+      document.getElementById('refresh').addEventListener(
+        'click', () => window.electronAPI.refreshTab()
+      );
+
+      document.getElementById('home').addEventListener(
+        'click', () => window.electronAPI.goHome()
+      );
+
+      document.getElementById('theme-toggle').addEventListener(
+        'click', async () => {
+          const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          await window.electronAPI.setTheme(nextTheme);
+          applyTheme(nextTheme);
+        }
+      );
+
+	  muteButton.addEventListener('click', async () => {
+        const currentlyMuted = await window.electronAPI.getAudioMuted();
+        const muted = await window.electronAPI.setAudioMuted(!currentlyMuted);
+        updateMuteButton(muted);
+      });
+
+      window.electronAPI.onAudioStateUpdated(({ id, audible }) => {
+        setTabAudioIndicator(id, audible);
+      });
+
+      const muted = await window.electronAPI.getAudioMuted();
+      updateMuteButton(muted);
+
+      const audioStates = await window.electronAPI.getAudioStates();
+      for (const [id, audible] of Object.entries(audioStates)) {
+        setTabAudioIndicator(id, audible);
+      }
+    }
+
+    init().catch(console.error);
+  </script>
+</body>
+</html>
