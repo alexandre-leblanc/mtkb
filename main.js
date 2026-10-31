@@ -11,26 +11,169 @@ const userDataPath = path.join(
   'mtkb'
 );
 
-fs.mkdirSync(userDataPath, { recursive: true });
-app.setPath('userData', userDataPath);
+const usage = `Multi-Tab Kiosk Browser
 
-const configPath = path.join(__dirname, 'config.json');
+Usage: mtkb [options]
+
+Options:
+  --config <path>   Use a specific configuration file.
+  --windowed        Start in a normal resizable window.
+  --fullscreen      Start in fullscreen mode.
+  --kiosk           Start in kiosk mode.
+  --help            Show this help message.
+
+Display mode options are mutually exclusive.
+A command-line display mode overrides startup.mode in the configuration.
+Without either setting, the application starts windowed.
+`;
+
+const appArguments = process.argv.slice(2);
+
+const showHelp = appArguments.includes('--help');
+
+let configPath = path.join(userDataPath, 'config.json');
+let configPathError = null;
+let cliStartupMode = null;
+let configOptionCount = 0;
+
+if (!showHelp) {
+  for (let i = 0; i < appArguments.length; i++) {
+    const arg = appArguments[i];
+
+    if (arg === '--windowed' || arg === '--fullscreen' || arg === '--kiosk') {
+      if (cliStartupMode !== null) {
+        configPathError =
+          'Only one of --windowed, --fullscreen, or --kiosk may be specified.';
+        break;
+      }
+
+      cliStartupMode = arg.slice(2);
+      continue;
+    }
+
+    if (arg === '--config') {
+      configOptionCount++;
+
+      if (configOptionCount > 1) {
+        configPathError = 'The --config option can only be specified once.';
+        break;
+      }
+
+      const suppliedPath = appArguments[++i];
+
+      if (!suppliedPath || suppliedPath.startsWith('--')) {
+        configPathError = 'The --config option requires a file path.';
+        break;
+      }
+
+      configPath = path.resolve(process.cwd(), suppliedPath);
+      continue;
+    }
+
+    if (arg.startsWith('--config=')) {
+      configOptionCount++;
+
+      if (configOptionCount > 1) {
+        configPathError = 'The --config option can only be specified once.';
+        break;
+      }
+
+      const suppliedPath = arg.slice('--config='.length);
+
+      if (!suppliedPath.trim()) {
+        configPathError = 'The --config option requires a file path.';
+        break;
+      }
+
+      configPath = path.resolve(process.cwd(), suppliedPath);
+      continue;
+    }
+
+    if (arg.startsWith('-')) {
+      configPathError = `Unknown option: ${arg}`;
+      break;
+    }
+
+    configPathError = `Unexpected argument: ${arg}`;
+    break;
+  }
+}
+
+const usingDefaultConfig = configOptionCount === 0;
+
+if (!showHelp) {
+  fs.mkdirSync(userDataPath, { recursive: true });
+  app.setPath('userData', userDataPath);
+}
 
 let config;
 let startupError = null;
 
 try {
-  config = JSON.parse(
-    fs.readFileSync(configPath, 'utf8')
-  );
+  if (showHelp) {
+    config = {
+      tabs: [],
+      themes: {},
+      defaultTheme: 'dark'
+    };
+  } else {
+    if (configPathError) {
+      throw new Error(configPathError);
+    }
+
+    // Initialize the default configuration on first launch.
+    if (usingDefaultConfig && !fs.existsSync(configPath)) {
+      const exampleConfigPath = path.join(
+        __dirname,
+        'config.example.json'
+      );
+
+      const bundledIconsPath = path.join(__dirname, 'icons');
+      const userIconsPath = path.join(userDataPath, 'icons');
+
+      if (!fs.existsSync(exampleConfigPath)) {
+        throw new Error(
+          `The bundled example configuration was not found: ${exampleConfigPath}`
+        );
+      }
+
+      // Copy bundled icons only if the user does not already have an icons folder.
+      if (
+        fs.existsSync(bundledIconsPath) &&
+        !fs.existsSync(userIconsPath)
+      ) {
+        fs.cpSync(bundledIconsPath, userIconsPath, {
+          recursive: true,
+          errorOnExist: true,
+          force: false
+        });
+      }
+
+      fs.copyFileSync(
+        exampleConfigPath,
+        configPath,
+        fs.constants.COPYFILE_EXCL
+      );
+    }
+
+    config = JSON.parse(
+      fs.readFileSync(configPath, 'utf8')
+    );
+  }
 } catch (error) {
-  const reason = error instanceof SyntaxError
-    ? 'The configuration file contains invalid JSON.'
-    : 'The configuration file could not be read.';
+  const reason = configPathError
+    ? 'Invalid command-line option.'
+    : error instanceof SyntaxError
+      ? 'The configuration file contains invalid JSON.'
+      : 'The configuration file could not be read.';
+
+  const details = configPathError || error.message;
 
   startupError = {
-    title: 'Configuration Error',
-    message: `${reason}\n\nFile: ${configPath}\n\n${error.message}`
+    title: 'Startup Error',
+    message: configPathError
+      ? `${reason}\n\n${details}\n\n${usage}`
+      : `${reason}\n\nFile: ${configPath}\n\n${details}`
   };
 
   config = {
@@ -38,6 +181,24 @@ try {
     themes: {},
     defaultTheme: 'dark'
   };
+}
+
+let startupMode = 'windowed';
+
+if (!showHelp && !startupError) {
+  const configuredMode = config.startup?.mode ?? 'windowed';
+  const validModes = ['windowed', 'fullscreen', 'kiosk'];
+
+  if (!validModes.includes(configuredMode)) {
+    startupError = {
+      title: 'Configuration Error',
+      message:
+        `Invalid startup.mode: ${configuredMode}\n\n` +
+        'Valid values are: windowed, fullscreen, kiosk.'
+    };
+  } else {
+    startupMode = cliStartupMode || configuredMode;
+  }
 }
 
 function resolveBrowserDataPath(directory) {
@@ -137,7 +298,7 @@ function getLocalIconDataUrl(relativePath) {
   if (!relativePath) return null;
 
   try {
-    const fullPath = path.resolve(__dirname, relativePath);
+    const fullPath = path.resolve(path.dirname(configPath), relativePath);
     const ext = path.extname(fullPath).toLowerCase();
 
     const mimeTypes = {
@@ -271,8 +432,49 @@ function scheduleResizeViews() {
   }, 100);
 }
 
+function confirmKioskExit() {
+  if (!win || win.isDestroyed()) return;
+
+  dialog.showMessageBox(win, {
+    type: 'warning',
+    title: 'Exit Kiosk Mode',
+    message: 'Are you sure you want to exit the kiosk application?',
+    buttons: ['Cancel', 'Exit'],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true
+  }).then(({ response }) => {
+    if (response === 1) {
+      app.quit();
+    }
+  }).catch(error => {
+    console.error('Kiosk exit confirmation failed:', error);
+  });
+}
+
 function handleApplicationShortcut(contents) {
   contents.on('before-input-event', (event, input) => {
+    // Kiosk exit shortcut: Ctrl+Shift+Q.
+    if (
+      startupMode === 'kiosk' &&
+      input.key.toLowerCase() === 'q' &&
+      input.control &&
+      input.shift &&
+      !input.alt &&
+      !input.meta
+    ) {
+      event.preventDefault();
+
+      if (
+        input.type === 'keyDown' &&
+        !input.isAutoRepeat
+      ) {
+        confirmKioskExit();
+      }
+
+      return;
+    }
+
     if (input.key === 'F5') {
       event.preventDefault();
 
@@ -296,6 +498,9 @@ function handleApplicationShortcut(contents) {
     if (input.key !== 'F11') return;
 
     event.preventDefault();
+
+    // F11 cannot take the application out of kiosk mode.
+    if (startupMode === 'kiosk') return;
 
     if (
       input.type !== 'keyDown' ||
@@ -417,6 +622,11 @@ async function confirmWebsiteDataClear(scope) {
 }
 
 function createApplicationMenu() {
+  if (startupMode === 'kiosk') {
+    Menu.setApplicationMenu(null);
+    return;
+  }
+
   const template = [
     {
       label: 'File',
@@ -489,6 +699,13 @@ function createApplicationMenu() {
 
 function createWindow() {
   win = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    minWidth: 800,
+    minHeight: 600,
+    center: true,
+    fullscreen: startupMode === 'fullscreen',
+    kiosk: startupMode === 'kiosk',
     autoHideMenuBar: false,
     webPreferences: {
       nodeIntegration: false,
@@ -499,7 +716,7 @@ function createWindow() {
 
   win.loadFile('index.html');
 
-  win.setMenuBarVisibility(true);
+  win.setMenuBarVisibility(startupMode === 'windowed');
 
   win.on('resize', scheduleResizeViews);
 
@@ -519,7 +736,7 @@ function createWindow() {
   win.on('leave-full-screen', () => {
     setTimeout(() => {
       if (win && !win.isDestroyed()) {
-        win.setMenuBarVisibility(true);
+        win.setMenuBarVisibility(startupMode === 'windowed');
       }
     }, 100);
 
@@ -685,6 +902,12 @@ function installPopupHandler(contents, tab) {
 }
 
 app.whenReady().then(async () => {
+  if (showHelp) {
+    console.log(usage);
+    app.quit();
+    return;
+  }
+
   if (startupError) {
     dialog.showErrorBox(
       startupError.title,
