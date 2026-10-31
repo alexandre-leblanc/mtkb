@@ -4,18 +4,117 @@ const {
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 const userDataPath = path.join(
   app.getPath('appData'),
-  'kiosk-browser'
+  'mtkb'
 );
 
 fs.mkdirSync(userDataPath, { recursive: true });
 app.setPath('userData', userDataPath);
 
-const config = JSON.parse(
-  fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')
-);
+const configPath = path.join(__dirname, 'config.json');
+
+let config;
+let startupError = null;
+
+try {
+  config = JSON.parse(
+    fs.readFileSync(configPath, 'utf8')
+  );
+} catch (error) {
+  const reason = error instanceof SyntaxError
+    ? 'The configuration file contains invalid JSON.'
+    : 'The configuration file could not be read.';
+
+  startupError = {
+    title: 'Configuration Error',
+    message: `${reason}\n\nFile: ${configPath}\n\n${error.message}`
+  };
+
+  config = {
+    tabs: [],
+    themes: {},
+    defaultTheme: 'dark'
+  };
+}
+
+function resolveBrowserDataPath(directory) {
+  if (directory === null || directory === undefined) {
+    return path.join(userDataPath, 'browser-data');
+  }
+
+  if (typeof directory !== 'string' || directory.trim() === '') {
+    throw new Error(
+      'browserData.directory must be null or a non-empty path string.'
+    );
+  }
+
+  let expandedPath = directory.trim();
+  const homePath = os.homedir();
+
+  // Expand ~ on all supported platforms.
+  if (
+    expandedPath === '~' ||
+    expandedPath.startsWith('~/') ||
+    expandedPath.startsWith('~\\')
+  ) {
+    expandedPath = path.join(homePath, expandedPath.slice(2));
+  }
+
+  // Expand platform-specific home-directory variables.
+  if (process.platform === 'win32') {
+    expandedPath = expandedPath.replace(
+      /%USERPROFILE%/gi,
+      process.env.USERPROFILE || homePath
+    );
+  } else {
+    expandedPath = expandedPath
+      .replace(/\$\{HOME\}/g, homePath)
+      .replace(/\$HOME(?=$|[\\/])/g, homePath);
+  }
+
+  // Resolve relative paths from the active config file's directory.
+  const basePath = path.isAbsolute(expandedPath)
+    ? path.resolve(expandedPath)
+    : path.resolve(__dirname, expandedPath);
+
+  // Keep the browser profile in its own application-specific folder.
+  return path.join(basePath, 'mtkb');
+}
+
+let browserDataPath = null;
+
+if (!startupError) {
+  const browserDataDirectory = config.browserData?.directory ?? null;
+
+  try {
+    browserDataPath = resolveBrowserDataPath(browserDataDirectory);
+
+    fs.mkdirSync(browserDataPath, { recursive: true });
+
+    fs.accessSync(
+      browserDataPath,
+      fs.constants.R_OK | fs.constants.W_OK
+    );
+
+    console.log(`Using browser profile: ${browserDataPath}`);
+
+    app.setPath('sessionData', browserDataPath);
+  } catch (error) {
+    const configuredPath = browserDataDirectory ?? '(default)';
+
+    const resolvedPath = browserDataPath
+      ? `\nResolved profile path: ${browserDataPath}`
+      : '';
+
+    startupError = {
+      title: 'Browser Profile Error',
+      message: `The browser profile directory could not be created or accessed.\n\nConfigured browserData.directory: ${configuredPath}${resolvedPath}\n\n${error.message}`
+    };
+  }
+}
 
 const themePath = path.join(app.getPath('userData'), 'theme.json');
 
@@ -222,7 +321,7 @@ function getPersistentTabSessions(scope) {
   );
 
   const partitionsPath = path.join(
-    app.getPath('userData'),
+    app.getPath('sessionData'),
     'Partitions'
   );
 
@@ -586,6 +685,16 @@ function installPopupHandler(contents, tab) {
 }
 
 app.whenReady().then(async () => {
+  if (startupError) {
+    dialog.showErrorBox(
+      startupError.title,
+      startupError.message
+    );
+
+    app.quit();
+    return;
+  }
+
   ipcMain.handle('get-config', () => getConfigForToolbar());
 
   ipcMain.on('close-active-popup', () => {

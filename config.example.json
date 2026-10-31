@@ -1,48 +1,62 @@
 {
+  "configVersion": 1,
+  "startup": {
+    "mode": "windowed"
+  },
+  "browserData": {
+    "directory": null,
+    "clearCache": {
+      "onStartup": false,
+      "onExit": false
+    },
+    "clearWebsiteData": {
+      "onStartup": false,
+      "onExit": false
+    }
+  },
   "tabs": [
     {
-      "id": "example1",
-      "name": "Example Website",
-      "url": "https://example.com",
-      "localIcon": "icons/example1.png",
-      "iconPreference": "local"
+      "id": "project",
+      "name": "Project",
+      "url": "https://github.com/alexandre-leblanc/multi-tab-kiosk-browser",
+      "localIcon": "icons/app.png",
+      "iconPreference": "local",
+      "allowPopups": false
     },
     {
-      "id": "example2",
-      "name": "Another Website",
-      "url": "https://example.org",
-      "localIcon": "icons/example2.png",
-      "iconPreference": "local"
+      "id": "home-assistant",
+      "name": "Home Assistant",
+      "url": "https://www.home-assistant.io/",
+      "iconPreference": "website",
+      "allowPopups": false
     },
     {
-      "id": "example3",
-      "name": "Example Service 3",
-      "url": "https://example.com",
-      "iconPreference": "website"
+      "id": "donetick",
+      "name": "Donetick",
+      "url": "https://github.com/donetick/donetick",
+      "iconPreference": "website",
+      "allowPopups": false
     },
     {
-      "id": "example4",
-      "name": "Example Service 4",
-      "url": "https://example.com",
-      "iconPreference": "website"
+      "id": "wikipedia",
+      "name": "Wikipedia",
+      "url": "https://www.wikipedia.org/",
+      "iconPreference": "website",
+      "allowPopups": false
     },
     {
-      "id": "example5",
-      "name": "Example Service 5",
-      "url": "https://example.com",
-      "iconPreference": "website"
+      "id": "youtube",
+      "name": "YouTube",
+      "url": "https://www.youtube.com/",
+      "iconPreference": "website",
+      "allowPopups": false
     },
     {
-      "id": "example6",
-      "name": "Example Service 6",
-      "url": "https://example.com",
-      "iconPreference": "website"
-    },
-    {
-      "id": "example7",
-      "name": "Example Service 7",
-      "url": "https://example.com",
-      "iconPreference": "website"
+      "id": "spotify",
+      "name": "Spotify",
+      "url": "https://open.spotify.com/",
+      "iconPreference": "website",
+      "allowPopups": false
     }
   ],
   "defaultTheme": "dark",
