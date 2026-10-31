@@ -11,6 +11,11 @@ const userDataPath = path.join(
   'mtkb'
 );
 
+const browserProfileResetMarkerPath = path.join(
+  userDataPath,
+  'browser-profile-reset.json'
+);
+
 const usage = `Multi-Tab Kiosk Browser
 
 Usage: mtkb [options]
@@ -245,6 +250,62 @@ function resolveBrowserDataPath(directory) {
   return path.join(basePath, 'mtkb');
 }
 
+function processPendingBrowserProfileReset(profilePath) {
+  if (!fs.existsSync(browserProfileResetMarkerPath)) return;
+
+  const resetRequest = JSON.parse(
+    fs.readFileSync(browserProfileResetMarkerPath, 'utf8')
+  );
+
+  if (
+    !resetRequest ||
+    typeof resetRequest.profilePath !== 'string' ||
+    path.resolve(resetRequest.profilePath) !== path.resolve(profilePath)
+  ) {
+    throw new Error(
+      'The pending browser profile reset does not match the configured profile path. No files were deleted.'
+    );
+  }
+
+  const resolvedUserDataPath = fs.realpathSync(userDataPath);
+
+  let resolvedProfilePath = path.resolve(profilePath);
+
+  if (fs.existsSync(resolvedProfilePath)) {
+    resolvedProfilePath = fs.realpathSync(resolvedProfilePath);
+  }
+
+  const relativeUserDataPath = path.relative(
+    resolvedProfilePath,
+    resolvedUserDataPath
+  );
+
+  const profileContainsUserData =
+    relativeUserDataPath === '' ||
+    (
+      relativeUserDataPath !== '..' &&
+      !relativeUserDataPath.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(relativeUserDataPath)
+    );
+
+  if (profileContainsUserData) {
+    throw new Error(
+      'The configured browser profile path contains the application data folder. Reset was refused to protect configuration and icons.'
+    );
+  }
+
+  console.log(`Resetting browser profile: ${profilePath}`);
+
+  fs.rmSync(profilePath, {
+    recursive: true,
+    force: true
+  });
+
+  fs.unlinkSync(browserProfileResetMarkerPath);
+
+  console.log('Browser profile reset completed.');
+}
+
 let browserDataPath = null;
 
 if (!startupError) {
@@ -252,6 +313,8 @@ if (!startupError) {
 
   try {
     browserDataPath = resolveBrowserDataPath(browserDataDirectory);
+
+    processPendingBrowserProfileReset(browserDataPath);
 
     fs.mkdirSync(browserDataPath, { recursive: true });
 
@@ -287,6 +350,7 @@ const popupStacks = new Map();
 let allowExitCleanup = false;
 let exitCleanupRunning = false;
 let exitCleanupComplete = false;
+let skipExitCleanup = false;
 
 function readSavedTheme() {
   try {
@@ -646,6 +710,68 @@ async function confirmWebsiteDataClear(scope) {
   }
 }
 
+async function confirmBrowserProfileReset() {
+  if (!win || win.isDestroyed() || !browserDataPath) return;
+
+  const result = await dialog.showMessageBox(win, {
+    type: 'warning',
+    title: 'Reset Browser Profile',
+    message: 'Are you sure you want to reset the browser profile?',
+    detail:
+      'This will permanently erase all browser sessions, website logins, cookies, cached data, saved website preferences, and local website storage for every tab.\n\nThe application will restart with a fresh browser profile. Your configuration, icons, and tab settings will be preserved.\n\nThis action cannot be undone.',
+    buttons: ['Cancel', 'Reset Profile'],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true
+  });
+
+  if (result.response !== 1) return;
+
+  let markerCreated = false;
+
+  try {
+    fs.writeFileSync(
+      browserProfileResetMarkerPath,
+      JSON.stringify({
+        profilePath: path.resolve(browserDataPath),
+        requestedAt: new Date().toISOString()
+      }, null, 2),
+      { flag: 'wx' }
+    );
+
+    markerCreated = true;
+
+    skipExitCleanup = true;
+
+    app.relaunch();
+    app.quit();
+  } catch (error) {
+    skipExitCleanup = false;
+
+    if (markerCreated) {
+      try {
+        fs.unlinkSync(browserProfileResetMarkerPath);
+      } catch (cleanupError) {
+        console.error(
+          'Could not remove failed reset marker:',
+          cleanupError
+        );
+      }
+    }
+
+    console.error('Browser profile reset failed:', error);
+
+    if (win && !win.isDestroyed()) {
+      await dialog.showMessageBox(win, {
+        type: 'error',
+        title: 'Reset Failed',
+        message: 'Could not restart the application to reset the browser profile.',
+        detail: error.message
+      });
+    }
+  }
+}
+
 function createApplicationMenu() {
   if (startupMode === 'kiosk') {
     Menu.setApplicationMenu(null);
@@ -713,6 +839,13 @@ function createApplicationMenu() {
               click: () => confirmWebsiteDataClear('all')
             }
           ]
+        },
+        {
+          type: 'separator'
+        },
+        {
+          label: 'Reset Browser Profile...',
+          click: () => confirmBrowserProfileReset()
         }
       ]
     }
@@ -1126,7 +1259,11 @@ app.whenReady().then(async () => {
 });
 
 app.on('before-quit', event => {
-  if (!allowExitCleanup || exitCleanupComplete) return;
+  if (
+    !allowExitCleanup ||
+    exitCleanupComplete ||
+    skipExitCleanup
+  ) return;
 
   const clearCache =
     config.browserData?.clearCache?.onExit === true;
