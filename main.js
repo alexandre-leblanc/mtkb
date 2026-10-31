@@ -894,7 +894,7 @@ function createWindow() {
   win.on('leave-full-screen', () => {
     setTimeout(() => {
       if (win && !win.isDestroyed()) {
-        win.setMenuBarVisibility(startupMode === 'windowed');
+        win.setMenuBarVisibility(startupMode !== 'kiosk');
       }
     }, 100);
 
