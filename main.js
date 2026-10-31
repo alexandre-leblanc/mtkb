@@ -284,6 +284,9 @@ let activeTabId = config.tabs[0]?.id;
 let globallyMuted = false;
 const views = new Map();
 const popupStacks = new Map();
+let allowExitCleanup = false;
+let exitCleanupRunning = false;
+let exitCleanupComplete = false;
 
 function readSavedTheme() {
   try {
@@ -582,6 +585,28 @@ async function clearTabWebsiteData(scope) {
   console.log(
     `Cookies and website data cleared: ${scope} (${sessions.length} sessions)`
   );
+}
+
+async function clearConfiguredBrowserData(stage) {
+  const clearCache =
+    config.browserData?.clearCache?.[stage] === true;
+
+  const clearWebsiteData =
+    config.browserData?.clearWebsiteData?.[stage] === true;
+
+  if (!clearCache && !clearWebsiteData) return;
+
+  console.log(`Running browser data cleanup: ${stage}`);
+
+  if (clearCache) {
+    await clearTabCache('all');
+  }
+
+  if (clearWebsiteData) {
+    await clearTabWebsiteData('all');
+  }
+
+  console.log(`Browser data cleanup completed: ${stage}`);
 }
 
 async function confirmWebsiteDataClear(scope) {
@@ -918,6 +943,22 @@ app.whenReady().then(async () => {
     return;
   }
 
+  try {
+    await clearConfiguredBrowserData('onStartup');
+  } catch (error) {
+    console.error('Startup browser data cleanup failed:', error);
+
+    dialog.showErrorBox(
+      'Startup Cleanup Failed',
+      `Could not complete the configured browser data cleanup.\n\n${error.message}\n\nThe application will not load any websites.`
+    );
+
+    app.quit();
+    return;
+  }
+
+  allowExitCleanup = true;
+
   ipcMain.handle('get-config', () => getConfigForToolbar());
 
   ipcMain.on('close-active-popup', () => {
@@ -1082,6 +1123,36 @@ app.whenReady().then(async () => {
   }
 
   activateTab(activeTabId);
+});
+
+app.on('before-quit', event => {
+  if (!allowExitCleanup || exitCleanupComplete) return;
+
+  const clearCache =
+    config.browserData?.clearCache?.onExit === true;
+
+  const clearWebsiteData =
+    config.browserData?.clearWebsiteData?.onExit === true;
+
+  if (!clearCache && !clearWebsiteData) {
+    exitCleanupComplete = true;
+    return;
+  }
+
+  event.preventDefault();
+
+  if (exitCleanupRunning) return;
+
+  exitCleanupRunning = true;
+
+  clearConfiguredBrowserData('onExit')
+    .catch(error => {
+      console.error('Exit browser data cleanup failed:', error);
+    })
+    .finally(() => {
+      exitCleanupComplete = true;
+      app.quit();
+    });
 });
 
 app.on('window-all-closed', () => {
