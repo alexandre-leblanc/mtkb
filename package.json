@@ -18,6 +18,6 @@
   "license": "SEE LICENSE IN LICENSE",
   "type": "commonjs",
   "devDependencies": {
-    "electron": "33.0.0"
+    "electron": "44.10.0"
   }
 }

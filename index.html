@@ -138,7 +138,7 @@
     }
 
 
-	.audio-indicator {
+  .audio-indicator {
       display: none;
       flex: 0 0 auto;
       width: 15px;
@@ -183,7 +183,7 @@
     <button class="theme-btn" id="theme-toggle"
             title="Switch theme" aria-label="Switch theme">☀</button>
 
-	<button class="mute-btn" id="mute-toggle" title="Mute all tabs" aria-label="Mute all tabs">
+  <button class="mute-btn" id="mute-toggle" title="Mute all tabs" aria-label="Mute all tabs">
       <svg id="mute-icon" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
         <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
@@ -340,7 +340,7 @@
       loadCandidates(state, makeCandidates(state));
     }
 
-	function setTabAudioIndicator(id, audible) {
+  function setTabAudioIndicator(id, audible) {
       const indicator = audioIndicators.get(id);
       if (!indicator) return;
 
@@ -413,7 +413,7 @@
           candidates: [],
           index: 0,
           currentCandidate: null,
-		  tabId: tab.id
+      tabId: tab.id
         };
 
         iconStates.set(tab.id, state);
@@ -462,7 +462,7 @@
         }
       );
 
-	  muteButton.addEventListener('click', async () => {
+    muteButton.addEventListener('click', async () => {
         const currentlyMuted = await window.electronAPI.getAudioMuted();
         const muted = await window.electronAPI.setAudioMuted(!currentlyMuted);
         updateMuteButton(muted);
