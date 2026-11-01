@@ -1,7 +1,10 @@
 {
   "configVersion": 1,
   "startup": {
-    "mode": "windowed"
+   "mode": "windowed"
+  },
+  "certificateVerification": {
+    "allowInvalidCertificatesFor": []
   },
   "browserData": {
     "directory": null,
@@ -59,7 +62,7 @@
       "allowPopups": false
     }
   ],
-  "defaultTheme": "dark",
+  "startupTheme": "auto",
   "themes": {
     "dark": {
       "toolbarBackground": "#181818",

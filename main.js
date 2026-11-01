@@ -188,7 +188,9 @@ try {
   };
 }
 
+let certificateOverrideHosts = [];
 let startupMode = 'windowed';
+let startupTheme = 'auto';
 
 if (!showHelp && !startupError) {
   const configuredMode = config.startup?.mode ?? 'windowed';
@@ -203,6 +205,67 @@ if (!showHelp && !startupError) {
     };
   } else {
     startupMode = cliStartupMode || configuredMode;
+  }
+}
+
+if (!showHelp && !startupError) {
+  const certificateVerification = config.certificateVerification ?? {};
+  const configuredHosts =
+    certificateVerification.allowInvalidCertificatesFor ?? [];
+
+  if (
+    typeof certificateVerification !== 'object' ||
+    Array.isArray(certificateVerification) ||
+    certificateVerification === null
+  ) {
+    startupError = {
+      title: 'Configuration Error',
+      message: 'certificateVerification must be an object.'
+    };
+  } else if (
+    !Array.isArray(configuredHosts) ||
+    configuredHosts.some(host =>
+      typeof host !== 'string' ||
+      host.trim() === '' ||
+      host !== host.trim() ||
+      !/^[a-zA-Z0-9.-]+$/.test(host) ||
+      host.includes('*')
+    )
+  ) {
+    startupError = {
+      title: 'Configuration Error',
+      message:
+        'certificateVerification.allowInvalidCertificatesFor must be an array of hostnames or IP addresses. Wildcards and URLs are not permitted.'
+    };
+  } else {
+    certificateOverrideHosts = [
+      ...new Set(configuredHosts.map(host => host.toLowerCase()))
+    ];
+  }
+}
+
+if (!showHelp && !startupError) {
+  const configuredTheme = config.startupTheme ?? 'auto';
+  const validStartupThemes = ['auto', 'light', 'dark'];
+
+  if (!validStartupThemes.includes(configuredTheme)) {
+    startupError = {
+      title: 'Configuration Error',
+      message:
+        `Invalid startupTheme: ${configuredTheme}\n\n` +
+        'Valid values are: auto, light, dark.'
+    };
+  } else if (
+    configuredTheme !== 'auto' &&
+    !config.themes?.[configuredTheme]
+  ) {
+    startupError = {
+      title: 'Configuration Error',
+      message:
+        `startupTheme is set to "${configuredTheme}", but that theme is not defined in config.themes.`
+    };
+  } else {
+    startupTheme = configuredTheme;
   }
 }
 
@@ -353,12 +416,16 @@ let exitCleanupComplete = false;
 let skipExitCleanup = false;
 
 function readSavedTheme() {
+  if (startupTheme !== 'auto') {
+    return startupTheme;
+  }
+
   try {
     const saved = JSON.parse(fs.readFileSync(themePath, 'utf8'));
     if (config.themes?.[saved.theme]) return saved.theme;
   } catch {}
 
-  return config.defaultTheme || 'dark';
+  return config.themes?.dark ? 'dark' : 'light';
 }
 
 function getLocalIconDataUrl(relativePath) {
@@ -399,8 +466,10 @@ function getConfigForToolbar() {
 }
 
 function configureLocalCertificateTrust(ses) {
+  if (certificateOverrideHosts.length === 0) return;
+
   ses.setCertificateVerifyProc((request, callback) => {
-    if (request.hostname === '192.168.0.151') {
+    if (certificateOverrideHosts.includes(request.hostname.toLowerCase())) {
       callback(0);
     } else {
       callback(-3);
