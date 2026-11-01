@@ -7,6 +7,9 @@
 
   <style>
     * { box-sizing: border-box; }
+    [hidden] {
+      display: none !important;
+    }
 
     :root {
       --toolbar-bg: #181818;
@@ -66,6 +69,41 @@
       width: 34px;
       padding: 0;
       font-size: 18px;
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      flex: 0 0 auto;
+    }
+
+    .zoom-btn {
+      height: 30px;
+      min-width: 30px;
+      padding: 0 6px;
+      background: var(--nav-bg);
+      color: var(--text-color);
+      border: 1px solid var(--nav-border);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+
+    .zoom-btn:active {
+      background: var(--nav-active-bg);
+    }
+
+    #zoom-level {
+      min-width: 46px;
+      text-align: center;
+      color: var(--text-color);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
     }
 
     .mute-btn svg {
@@ -180,6 +218,18 @@
     <div class="separator"></div>
     <div id="tabs-container"></div>
 
+    <div class="separator" id="separator-before-zoom"></div>
+
+    <div class="zoom-controls" id="zoom-controls">
+      <button class="zoom-btn" id="zoom-out"
+              title="Zoom out" aria-label="Zoom out">−</button>
+      <span id="zoom-level" aria-live="polite">100%</span>
+      <button class="zoom-btn" id="zoom-in"
+              title="Zoom in" aria-label="Zoom in">+</button>
+    </div>
+
+    <div class="separator" id="separator-after-zoom"></div>
+
     <button class="theme-btn" id="theme-toggle"
             title="Switch theme" aria-label="Switch theme">☀</button>
 
@@ -205,6 +255,13 @@
 
     const muteButton = document.getElementById('mute-toggle');
     const muteIcon = document.getElementById('mute-icon');
+    const zoomLevelDisplay = document.getElementById('zoom-level');
+    const zoomInButton = document.getElementById('zoom-in');
+    const zoomOutButton = document.getElementById('zoom-out');
+
+    function updateZoomDisplay(factor) {
+      zoomLevelDisplay.textContent = `${Math.round(factor * 100)}%`;
+    }
 
     function applyTheme(themeName) {
       const theme = config.themes[themeName];
@@ -348,20 +405,56 @@
     }
 
     function updateMuteButton(muted) {
-      muteButton.classList.toggle('muted', muted);
-      muteButton.title = muted ? 'Unmute all tabs' : 'Mute all tabs';
-      muteButton.setAttribute(
-        'aria-label',
-        muted ? 'Unmute all tabs' : 'Mute all tabs'
-      );
+      const forcedMuted = config.audio?.alwaysMuted === true;
+      const isMuted = forcedMuted || Boolean(muted);
 
-      muteIcon.innerHTML = muted
+      muteButton.classList.toggle('muted', isMuted);
+      muteButton.disabled = forcedMuted;
+
+      const label = forcedMuted
+        ? 'Audio is always muted by configuration'
+        : isMuted
+          ? 'Unmute all tabs'
+          : 'Mute all tabs';
+
+      muteButton.title = label;
+      muteButton.setAttribute('aria-label', label);
+
+      muteIcon.innerHTML = isMuted
         ? '<path d="M11 5 6 9H3v6h3l5 4V5Z"></path><path d="m16 9 5 6"></path><path d="m21 9-5 6"></path>'
-            : '<path d="M11 5 6 9H3v6h3l5 4V5Z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path>';
+        : '<path d="M11 5 6 9H3v6h3l5 4V5Z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path>';
     }
 
     async function init() {
       config = await window.electronAPI.getConfig();
+
+      const showZoomControls = config.toolbar.showZoomControls !== false;
+      const showThemeToggle = config.toolbar.showThemeToggle !== false;
+      const showMuteToggle = config.toolbar.showMuteToggle !== false;
+
+      document.getElementById('theme-toggle').hidden = !showThemeToggle;
+      muteButton.hidden = !showMuteToggle;
+      document.getElementById('zoom-controls').hidden = !showZoomControls;
+
+      document.getElementById('separator-before-zoom').hidden =
+        !showZoomControls;
+
+      document.getElementById('separator-after-zoom').hidden =
+        !(showThemeToggle || showMuteToggle);
+
+      zoomInButton.addEventListener('click', async () => {
+        const factor = await window.electronAPI.changeZoom(1);
+        updateZoomDisplay(factor);
+      });
+
+      zoomOutButton.addEventListener('click', async () => {
+        const factor = await window.electronAPI.changeZoom(-1);
+        updateZoomDisplay(factor);
+      });
+
+      window.electronAPI.onZoomLevelUpdated(updateZoomDisplay);
+
+      updateZoomDisplay(await window.electronAPI.getZoomLevel());
 
       const savedTheme = await window.electronAPI.getTheme();
       applyTheme(savedTheme);

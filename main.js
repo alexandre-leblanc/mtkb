@@ -112,6 +112,371 @@ if (!showHelp) {
   app.setPath('userData', userDataPath);
 }
 
+function validateConfig(raw) {
+  function requireObject(value, name) {
+    if (
+      !value ||
+      typeof value !== 'object' ||
+      Array.isArray(value)
+    ) {
+      throw new Error(`${name} must be an object.`);
+    }
+    return value;
+  }
+
+  function requireBoolean(value, name, fallback) {
+    if (value === undefined) return fallback;
+    if (typeof value !== 'boolean') {
+      throw new Error(`${name} must be true or false.`);
+    }
+    return value;
+  }
+
+  function warnUnknownKeys(object, allowed, name) {
+    for (const key of Object.keys(object)) {
+      if (!allowed.includes(key)) {
+        console.warn(`Unknown configuration property: ${name}.${key}`);
+      }
+    }
+  }
+
+  const config = requireObject(raw, 'Configuration');
+
+  warnUnknownKeys(config, [
+    'configVersion',
+    'startup',
+    'certificateVerification',
+    'browserData',
+    'tabs',
+    'startupTheme',
+    'toolbar',
+    'audio',
+    'themes'
+  ], 'config');
+
+  if (
+    config.configVersion !== undefined &&
+    config.configVersion !== 1
+  ) {
+    throw new Error('configVersion must be 1.');
+  }
+
+  const startup = config.startup === undefined
+    ? {}
+    : requireObject(config.startup, 'startup');
+
+  warnUnknownKeys(startup, ['mode'], 'startup');
+
+  const startupMode = startup.mode === undefined ? 'windowed' : startup.mode;
+
+  if (!['windowed', 'fullscreen', 'kiosk'].includes(startupMode)) {
+    throw new Error(
+      'startup.mode must be windowed, fullscreen, or kiosk.'
+    );
+  }
+
+  const certificateVerification =
+    config.certificateVerification === undefined
+      ? {}
+      : requireObject(
+          config.certificateVerification,
+          'certificateVerification'
+        );
+
+  warnUnknownKeys(
+    certificateVerification,
+    ['allowInvalidCertificatesFor'],
+    'certificateVerification'
+  );
+
+  const certificateHosts =
+    certificateVerification.allowInvalidCertificatesFor === undefined ? [] : certificateVerification.allowInvalidCertificatesFor;
+
+  if (
+    !Array.isArray(certificateHosts) ||
+    certificateHosts.some(host =>
+      typeof host !== 'string' ||
+      host.trim() !== host ||
+      host === '' ||
+      host.includes('*') ||
+      !/^[a-zA-Z0-9.-]+$/.test(host)
+    )
+  ) {
+    throw new Error(
+      'certificateVerification.allowInvalidCertificatesFor must be an array of hostnames or IP addresses. Wildcards and URLs are not permitted.'
+    );
+  }
+
+  const browserData = config.browserData === undefined
+    ? {}
+    : requireObject(config.browserData, 'browserData');
+
+  warnUnknownKeys(
+    browserData,
+    ['directory', 'clearCache', 'clearWebsiteData'],
+    'browserData'
+  );
+
+  const directory = browserData.directory ?? null;
+
+  if (
+    directory !== null &&
+    (
+      typeof directory !== 'string' ||
+      directory.trim() === ''
+    )
+  ) {
+    throw new Error(
+      'browserData.directory must be null or a non-empty path string.'
+    );
+  }
+
+  function validateCleanup(value, name) {
+    const cleanup = value === undefined
+      ? {}
+      : requireObject(value, name);
+
+    warnUnknownKeys(cleanup, ['onStartup', 'onExit'], name);
+
+    return {
+      onStartup: requireBoolean(
+        cleanup.onStartup,
+        `${name}.onStartup`,
+        false
+      ),
+      onExit: requireBoolean(
+        cleanup.onExit,
+        `${name}.onExit`,
+        false
+      )
+    };
+  }
+
+  const toolbar = config.toolbar === undefined
+    ? {}
+    : requireObject(config.toolbar, 'toolbar');
+
+  warnUnknownKeys(
+    toolbar,
+    ['showZoomControls', 'showThemeToggle', 'showMuteToggle'],
+    'toolbar'
+  );
+
+  const normalizedToolbar = {
+    showZoomControls: requireBoolean(
+      toolbar.showZoomControls,
+      'toolbar.showZoomControls',
+      true
+    ),
+    showThemeToggle: requireBoolean(
+      toolbar.showThemeToggle,
+      'toolbar.showThemeToggle',
+      true
+    ),
+    showMuteToggle: requireBoolean(
+      toolbar.showMuteToggle,
+      'toolbar.showMuteToggle',
+      true
+    )
+  };
+
+  const audio = config.audio === undefined
+    ? {}
+    : requireObject(config.audio, 'audio');
+
+  warnUnknownKeys(audio, ['alwaysMuted'], 'audio');
+
+  const alwaysMuted = requireBoolean(
+    audio.alwaysMuted,
+    'audio.alwaysMuted',
+    false
+  );
+
+  if (!Array.isArray(config.tabs) || config.tabs.length === 0) {
+    throw new Error('tabs must be a non-empty array.');
+  }
+
+  const tabIds = new Set();
+
+  const tabs = config.tabs.map((rawTab, index) => {
+    const tab = requireObject(rawTab, `tabs[${index}]`);
+
+    warnUnknownKeys(
+      tab,
+      [
+        'id',
+        'name',
+        'url',
+        'localIcon',
+        'iconPreference',
+        'allowPopups'
+      ],
+      `tabs[${index}]`
+    );
+
+    if (
+      typeof tab.id !== 'string' ||
+      !/^[a-zA-Z0-9_-]+$/.test(tab.id)
+    ) {
+      throw new Error(
+        `tabs[${index}].id must contain only letters, numbers, underscores, and hyphens.`
+      );
+    }
+
+    if (tabIds.has(tab.id)) {
+      throw new Error(`Duplicate tab ID: ${tab.id}`);
+    }
+    tabIds.add(tab.id);
+
+    if (typeof tab.name !== 'string' || !tab.name.trim()) {
+      throw new Error(`tabs[${index}].name must be a non-empty string.`);
+    }
+
+    if (typeof tab.url !== 'string') {
+      throw new Error(`tabs[${index}].url must be a URL string.`);
+    }
+
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(tab.url);
+    } catch {
+      throw new Error(`tabs[${index}].url is not a valid absolute URL.`);
+    }
+
+    if (
+      !['http:', 'https:'].includes(parsedUrl.protocol) ||
+      parsedUrl.username ||
+      parsedUrl.password
+    ) {
+      throw new Error(
+        `tabs[${index}].url must use HTTP or HTTPS and cannot contain credentials.`
+      );
+    }
+
+    if (
+      tab.localIcon !== undefined &&
+      (
+        typeof tab.localIcon !== 'string' ||
+        !tab.localIcon.trim()
+      )
+    ) {
+      throw new Error(
+        `tabs[${index}].localIcon must be a non-empty path string.`
+      );
+    }
+
+    const iconPreference =
+      tab.iconPreference === undefined ? 'website' : tab.iconPreference;
+    if (!['local', 'website'].includes(iconPreference)) {
+      throw new Error(
+        `tabs[${index}].iconPreference must be local or website.`
+      );
+    }
+
+    return {
+      ...tab,
+      iconPreference,
+      allowPopups: requireBoolean(
+        tab.allowPopups,
+        `tabs[${index}].allowPopups`,
+        false
+      )
+    };
+  });
+
+  const themes = requireObject(config.themes, 'themes');
+
+  const themeProperties = [
+    'toolbarBackground',
+    'textColor',
+    'navBackground',
+    'navBorder',
+    'navActiveBackground',
+    'tabBackground',
+    'tabTextColor',
+    'selectedTabBackground',
+    'selectedTabTextColor',
+    'separatorColor'
+  ];
+
+  for (const [name, rawTheme] of Object.entries(themes)) {
+    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+      throw new Error(`Invalid theme name: ${name}`);
+    }
+
+    const theme = requireObject(rawTheme, `themes.${name}`);
+
+    warnUnknownKeys(theme, themeProperties, `themes.${name}`);
+
+    for (const property of themeProperties) {
+      if (
+        typeof theme[property] !== 'string' ||
+        !/^#[0-9a-fA-F]{6}$/.test(theme[property])
+      ) {
+        throw new Error(
+          `themes.${name}.${property} must be a six-digit hex colour (for example, #181818).`
+        );
+      }
+    }
+  }
+
+  if (!themes.dark && !themes.light) {
+    throw new Error('themes must define at least a dark or light theme.');
+  }
+
+  const startupTheme =
+    config.startupTheme === undefined ? 'auto' : config.startupTheme;
+
+  if (!['auto', 'light', 'dark'].includes(startupTheme)) {
+    throw new Error('startupTheme must be auto, light, or dark.');
+  }
+
+  if (
+    startupTheme !== 'auto' &&
+    !themes[startupTheme]
+  ) {
+    throw new Error(
+      `startupTheme is set to "${startupTheme}", but that theme is not defined in themes.`
+    );
+  }
+
+  if (
+    normalizedToolbar.showThemeToggle &&
+    (!themes.dark || !themes.light)
+  ) {
+    throw new Error(
+      'Both dark and light themes must be defined when toolbar.showThemeToggle is enabled.'
+    );
+  }
+
+  return {
+    ...config,
+    configVersion: 1,
+    startup: { mode: startupMode },
+    certificateVerification: {
+      allowInvalidCertificatesFor: [
+        ...new Set(certificateHosts.map(host => host.toLowerCase()))
+      ]
+    },
+    browserData: {
+      directory,
+      clearCache: validateCleanup(
+        browserData.clearCache,
+        'browserData.clearCache'
+      ),
+      clearWebsiteData: validateCleanup(
+        browserData.clearWebsiteData,
+        'browserData.clearWebsiteData'
+      )
+    },
+    tabs,
+    startupTheme,
+    toolbar: normalizedToolbar,
+    audio: { alwaysMuted },
+    themes
+  };
+}
+
 let config;
 let startupError = null;
 
@@ -193,80 +558,49 @@ let certificateOverrideHosts = [];
 let startupMode = 'windowed';
 let startupTheme = 'auto';
 
-if (!showHelp && !startupError) {
-  const configuredMode = config.startup?.mode ?? 'windowed';
-  const validModes = ['windowed', 'fullscreen', 'kiosk'];
+let toolbarSettings = {
+  showZoomControls: true,
+  showThemeToggle: true,
+  showMuteToggle: true
+};
 
-  if (!validModes.includes(configuredMode)) {
-    startupError = {
-      title: 'Configuration Error',
-      message:
-        `Invalid startup.mode: ${configuredMode}\n\n` +
-        'Valid values are: windowed, fullscreen, kiosk.'
-    };
-  } else {
-    startupMode = cliStartupMode || configuredMode;
-  }
-}
+let alwaysMuted = false;
 
 if (!showHelp && !startupError) {
-  const certificateVerification = config.certificateVerification ?? {};
-  const configuredHosts =
-    certificateVerification.allowInvalidCertificatesFor ?? [];
+  try {
+    config = validateConfig(config);
 
-  if (
-    typeof certificateVerification !== 'object' ||
-    Array.isArray(certificateVerification) ||
-    certificateVerification === null
-  ) {
-    startupError = {
-      title: 'Configuration Error',
-      message: 'certificateVerification must be an object.'
-    };
-  } else if (
-    !Array.isArray(configuredHosts) ||
-    configuredHosts.some(host =>
-      typeof host !== 'string' ||
-      host.trim() === '' ||
-      host !== host.trim() ||
-      !/^[a-zA-Z0-9.-]+$/.test(host) ||
-      host.includes('*')
-    )
-  ) {
-    startupError = {
-      title: 'Configuration Error',
-      message:
-        'certificateVerification.allowInvalidCertificatesFor must be an array of hostnames or IP addresses. Wildcards and URLs are not permitted.'
-    };
-  } else {
-    certificateOverrideHosts = [
-      ...new Set(configuredHosts.map(host => host.toLowerCase()))
-    ];
-  }
-}
+    certificateOverrideHosts =
+      config.certificateVerification.allowInvalidCertificatesFor;
 
-if (!showHelp && !startupError) {
-  const configuredTheme = config.startupTheme ?? 'auto';
-  const validStartupThemes = ['auto', 'light', 'dark'];
+    startupMode = cliStartupMode || config.startup.mode;
+    startupTheme = config.startupTheme;
+    toolbarSettings = config.toolbar;
+    alwaysMuted = config.audio.alwaysMuted;
+  } catch (error) {
+    startupError = {
+      title: 'Configuration Error',
+      message: error.message
+    };
 
-  if (!validStartupThemes.includes(configuredTheme)) {
-    startupError = {
-      title: 'Configuration Error',
-      message:
-        `Invalid startupTheme: ${configuredTheme}\n\n` +
-        'Valid values are: auto, light, dark.'
+    // Keep later initialization safe; the startup error prevents
+    // the application from opening any browser tabs.
+    config = {
+      tabs: [],
+      themes: {},
+      startup: { mode: 'windowed' },
+      startupTheme: 'auto',
+      browserData: { directory: null },
+      toolbar: {
+        showZoomControls: true,
+        showThemeToggle: true,
+        showMuteToggle: true
+      },
+      audio: { alwaysMuted: false },
+      certificateVerification: {
+        allowInvalidCertificatesFor: []
+      }
     };
-  } else if (
-    configuredTheme !== 'auto' &&
-    !config.themes?.[configuredTheme]
-  ) {
-    startupError = {
-      title: 'Configuration Error',
-      message:
-        `startupTheme is set to "${configuredTheme}", but that theme is not defined in config.themes.`
-    };
-  } else {
-    startupTheme = configuredTheme;
   }
 }
 
@@ -405,12 +739,19 @@ if (!startupError) {
 }
 
 const themePath = path.join(app.getPath('userData'), 'theme.json');
+const zoomPath = path.join(userDataPath, 'zoom.json');
+
+const MIN_ZOOM_FACTOR = 0.25;
+const MAX_ZOOM_FACTOR = 5.0;
 
 let win;
 let activeTabId = config.tabs[0]?.id;
-let globallyMuted = false;
+let globallyMuted = alwaysMuted;
 const views = new Map();
 const popupStacks = new Map();
+let zoomLevels = new Map(
+  config.tabs.map(tab => [tab.id, 1.0])
+);
 let allowExitCleanup = false;
 let exitCleanupRunning = false;
 let exitCleanupComplete = false;
@@ -427,6 +768,88 @@ function readSavedTheme() {
   } catch {}
 
   return config.themes?.dark ? 'dark' : 'light';
+}
+
+function readSavedZoomLevels() {
+  const levels = new Map(
+    config.tabs.map(tab => [tab.id, 1.0])
+  );
+
+  try {
+    const saved = JSON.parse(fs.readFileSync(zoomPath, 'utf8'));
+
+    if (
+      !saved ||
+      typeof saved !== 'object' ||
+      Array.isArray(saved)
+    ) {
+      return levels;
+    }
+
+    for (const tab of config.tabs) {
+      const factor = saved[tab.id];
+
+      if (
+        typeof factor === 'number' &&
+        Number.isFinite(factor) &&
+        factor >= MIN_ZOOM_FACTOR &&
+        factor <= MAX_ZOOM_FACTOR
+      ) {
+        levels.set(tab.id, factor);
+      }
+    }
+  } catch {}
+
+  return levels;
+}
+
+function saveZoomLevels() {
+  const saved = Object.fromEntries(
+    config.tabs.map(tab => [
+      tab.id,
+      zoomLevels.get(tab.id) ?? 1.0
+    ])
+  );
+
+  fs.mkdirSync(path.dirname(zoomPath), { recursive: true });
+  fs.writeFileSync(zoomPath, JSON.stringify(saved, null, 2));
+}
+
+zoomLevels = readSavedZoomLevels();
+
+function applyTabZoom(tabId) {
+  const factor = zoomLevels.get(tabId) ?? 1.0;
+
+  const view = views.get(tabId);
+  if (view && !view.webContents.isDestroyed()) {
+    view.webContents.setZoomFactor(factor);
+  }
+
+  const stack = popupStacks.get(tabId) || [];
+  for (const layer of stack) {
+    if (!layer.popup.webContents.isDestroyed()) {
+      layer.popup.webContents.setZoomFactor(factor);
+    }
+  }
+
+  return factor;
+}
+
+function setTabZoom(tabId, factor) {
+  if (
+    typeof factor !== 'number' ||
+    !Number.isFinite(factor) ||
+    factor < MIN_ZOOM_FACTOR ||
+    factor > MAX_ZOOM_FACTOR
+  ) {
+    throw new Error('Invalid zoom factor');
+  }
+
+  zoomLevels.set(tabId, factor);
+  applyTabZoom(tabId);
+  saveZoomLevels();
+
+  return factor;
 }
 
 function getLocalIconDataUrl(relativePath) {
@@ -458,6 +881,10 @@ function getLocalIconDataUrl(relativePath) {
 function getConfigForToolbar() {
   return {
     ...config,
+    toolbar: toolbarSettings,
+    audio: {
+      alwaysMuted
+    },
     tabs: config.tabs.map(tab => ({
       ...tab,
       localIconDataUrl: getLocalIconDataUrl(tab.localIcon),
@@ -552,7 +979,13 @@ function activateTab(tabId) {
   if (!views.has(tabId)) return false;
 
   activeTabId = tabId;
+  const factor = applyTabZoom(tabId);
   resizeViews();
+
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('zoom-level-updated', factor);
+  }
+
   return true;
 }
 
@@ -1099,6 +1532,7 @@ function installPopupHandler(contents, tab) {
 
         stack.push(layer);
         popupStacks.set(tab.id, stack);
+        applyTabZoom(tab.id);
 
         // Add in this order so each new layer sits above the previous one.
         win.contentView.addChildView(overlay);
@@ -1228,10 +1662,54 @@ app.whenReady().then(async () => {
     }
   });
 
+  // Zoom controls
+  ipcMain.handle('get-zoom-level', () => {
+    return zoomLevels.get(activeTabId) ?? 1.0;
+  });
+
+  ipcMain.handle('change-zoom', (_, direction) => {
+    if (direction !== -1 && direction !== 1) {
+      throw new Error('Invalid zoom direction');
+    }
+
+    const current = zoomLevels.get(activeTabId) ?? 1.0;
+
+    const zoomSteps = [
+      0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9,
+      1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5,
+      3.0, 4.0, 5.0
+    ];
+
+    const next = direction === 1
+      ? zoomSteps.find(step => step > current + 0.001) ?? MAX_ZOOM_FACTOR
+      : [...zoomSteps].reverse().find(step => step < current - 0.001) ?? MIN_ZOOM_FACTOR;
+
+    const factor = setTabZoom(activeTabId, next);
+
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('zoom-level-updated', factor);
+    }
+
+    return factor;
+  });
+
+  ipcMain.handle('reset-zoom', () => {
+    const factor = setTabZoom(activeTabId, 1.0);
+
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('zoom-level-updated', factor);
+    }
+
+    return factor;
+  });
+
   // Audio controls
   ipcMain.handle('get-audio-muted', () => globallyMuted);
-
   ipcMain.handle('set-audio-muted', (_, muted) => {
+    if (alwaysMuted) {
+      return true;
+    }
+
     globallyMuted = Boolean(muted);
 
     for (const view of views.values()) {
@@ -1347,6 +1825,7 @@ app.whenReady().then(async () => {
     installPopupHandler(view.webContents, tab);
 
     views.set(tab.id, view);
+    applyTabZoom(tab.id);
     win.contentView.addChildView(view);
     view.setVisible(false);
 

@@ -63,6 +63,14 @@
     }
   ],
   "startupTheme": "auto",
+  "toolbar": {
+    "showZoomControls": true,
+    "showThemeToggle": true,
+    "showMuteToggle": true
+  },
+  "audio": {
+    "alwaysMuted": false
+  },
   "themes": {
     "dark": {
       "toolbarBackground": "#181818",

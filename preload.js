@@ -10,6 +10,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   goHome: () => ipcRenderer.invoke('go-home'),
   getTheme: () => ipcRenderer.invoke('get-theme'),
   setTheme: theme => ipcRenderer.invoke('set-theme', theme),
+  getZoomLevel: () => ipcRenderer.invoke('get-zoom-level'),
+  changeZoom: direction => ipcRenderer.invoke('change-zoom', direction),
+  resetZoom: () => ipcRenderer.invoke('reset-zoom'),
+
+  onZoomLevelUpdated: callback => {
+    ipcRenderer.on('zoom-level-updated', (_, factor) => callback(factor));
+  },
 
   getAudioMuted: () => ipcRenderer.invoke('get-audio-muted'),
   setAudioMuted: muted => ipcRenderer.invoke('set-audio-muted', muted),
