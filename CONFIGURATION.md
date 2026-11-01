@@ -32,7 +32,7 @@ A different configuration file can be specified with the `--config` command-line
 mtkb --config /path/to/config.json
 ```
 
-The path can be absolute or relative. Relative paths are resolved from the application's current working directory.
+The path supplied to `--config` can be absolute or relative. Relative `--config` paths are resolved from the current working directory.
 
 When a custom configuration file is used, local icon paths and relative browser-profile paths are resolved relative to that configuration file's directory.
 
