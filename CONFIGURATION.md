@@ -437,6 +437,7 @@ Example:
 | `localIcon` | No | Path to a custom icon image for the tab. |
 | `iconPreference` | No | Determines whether the local icon or website icon is preferred. |
 | `allowPopups` | No | Determines whether the tab is allowed to open popup windows. Defaults to `false` when omitted. |
+| `allowWebsiteFullscreen` | No | Determines whether the website can enter HTML fullscreen, such as fullscreen video playback. Defaults to `true` when omitted. |
 
 ### Tab identifiers
 
@@ -520,6 +521,28 @@ Example:
 ```
 
 Enable this setting only for websites that require popup windows for normal operation, such as certain authentication or account-management workflows.
+
+### Website fullscreen permissions
+
+The `allowWebsiteFullscreen` property controls whether a website tab can enter fullscreen using the HTML Fullscreen API.
+
+Default:
+
+```json
+"allowWebsiteFullscreen": true
+```
+
+Example:
+
+```json
+"allowWebsiteFullscreen": false
+```
+
+When disabled, website-initiated fullscreen requests are immediately exited. This prevents websites from taking over the display with fullscreen videos or other HTML content.
+
+This setting does not affect MTKB's own fullscreen controls, including F11, startup fullscreen, or kiosk mode.
+
+Popup windows inherit the setting from their parent tab.
 
 ## 9. Theme customization
 

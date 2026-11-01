@@ -309,7 +309,8 @@ function validateConfig(raw) {
         'url',
         'localIcon',
         'iconPreference',
-        'allowPopups'
+        'allowPopups',
+        'allowWebsiteFullscreen'
       ],
       `tabs[${index}]`
     );
@@ -380,6 +381,11 @@ function validateConfig(raw) {
         tab.allowPopups,
         `tabs[${index}].allowPopups`,
         false
+      ),
+      allowWebsiteFullscreen: requireBoolean(
+        tab.allowWebsiteFullscreen,
+        `tabs[${index}].allowWebsiteFullscreen`,
+        true
       )
     };
   });
@@ -1476,6 +1482,21 @@ function isAllowedPopupUrl(url) {
   }
 }
 
+function installWebsiteFullscreenHandler(contents, tab) {
+  contents.on('enter-html-full-screen', () => {
+    if (tab.allowWebsiteFullscreen !== false || contents.isDestroyed()) {
+      return;
+    }
+
+    contents.executeJavaScript('document.exitFullscreen()').catch(error => {
+      console.warn(
+        `Could not exit website fullscreen for tab "${tab.id}":`,
+        error.message
+      );
+    });
+  });
+}
+
 function installPopupHandler(contents, tab) {
   contents.setWindowOpenHandler((details) => {
     // Ignore popup requests caused by middle-clicking a link.
@@ -1504,6 +1525,8 @@ function installPopupHandler(contents, tab) {
           webContents: options.webContents
         });
         handleApplicationShortcut(popup.webContents);
+
+        installWebsiteFullscreenHandler(popup.webContents, tab);
 
         popup.setBorderRadius(4);
         popup.webContents.setAudioMuted(globallyMuted);
@@ -1820,6 +1843,8 @@ app.whenReady().then(async () => {
       }
     });
     handleApplicationShortcut(view.webContents);
+
+    installWebsiteFullscreenHandler(view.webContents, tab);
 
     // Handle popup requests for this tab and its nested popups.
     installPopupHandler(view.webContents, tab);
