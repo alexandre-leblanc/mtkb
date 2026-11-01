@@ -21,7 +21,7 @@
     {
       "id": "project",
       "name": "Project",
-      "url": "https://github.com/alexandre-leblanc/multi-tab-kiosk-browser",
+      "url": "https://github.com/alexandre-leblanc/mtkb",
       "localIcon": "icons/app.png",
       "iconPreference": "local",
       "allowPopups": false

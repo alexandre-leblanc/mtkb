@@ -1,5 +1,5 @@
 {
-  "name": "multi-tab-kiosk-browser",
+  "name": "mtkb",
   "productName": "Multi-Tab Kiosk Browser",
   "version": "1.0.0",
   "description": "A configurable multi-tab browser for kiosk and dashboard applications",
