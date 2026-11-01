@@ -1,10 +1,11 @@
 
 const {
-  app, BrowserWindow, WebContentsView, ipcMain, session, net, Menu, dialog
+  app, BrowserWindow, WebContentsView, ipcMain, session, net, Menu, dialog, shell
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { execFile, spawn } = require('child_process');
 
 const userDataPath = path.join(
   app.getPath('appData'),
@@ -841,6 +842,54 @@ async function confirmBrowserProfileReset() {
   }
 }
 
+function openConfigurationFileLocation() {
+  const isWsl =
+    process.platform === 'linux' &&
+    (
+      Boolean(process.env.WSL_DISTRO_NAME) ||
+      os.release().toLowerCase().includes('microsoft')
+    );
+
+  if (!isWsl) {
+    shell.showItemInFolder(configPath);
+    return;
+  }
+
+  execFile(
+    'wslpath',
+    ['-w', configPath],
+    { encoding: 'utf8' },
+    (error, stdout) => {
+      if (error) {
+        console.error('Could not convert configuration path for Windows:', error);
+        return;
+      }
+
+      const windowsPath = stdout.trim();
+
+      if (!windowsPath) {
+        console.error('Windows configuration path is empty.');
+        return;
+      }
+
+      const explorer = spawn(
+        'explorer.exe',
+        [`/select,${windowsPath}`],
+        {
+          detached: true,
+          stdio: 'ignore'
+        }
+      );
+
+      explorer.on('error', error => {
+        console.error('Could not open Windows Explorer:', error);
+      });
+
+      explorer.unref();
+    }
+  );
+}
+
 function createApplicationMenu() {
   if (startupMode === 'kiosk') {
     Menu.setApplicationMenu(null);
@@ -911,6 +960,10 @@ function createApplicationMenu() {
         },
         {
           type: 'separator'
+        },
+        {
+          label: 'Open Configuration File Location',
+          click: () => openConfigurationFileLocation()
         },
         {
           label: 'Reset Browser Profile...',
