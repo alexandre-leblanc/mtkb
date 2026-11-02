@@ -37,17 +37,19 @@
       "popup-overlay.html",
       "config.example.json",
       "icons/**/*",
-      "package.json",
-      "README.md",
-      "CONFIGURATION.md",
-      "DATA-AND-PRIVACY.md",
-      "LICENSE"
+      "package.json"
     ],
     "win": {
       "target": [
         "nsis"
       ],
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "extraFiles": [
+        "README.md",
+        "CONFIGURATION.md",
+        "DATA-AND-PRIVACY.md",
+        "LICENSE"
+      ]
     },
     "nsis": {
       "oneClick": false,
