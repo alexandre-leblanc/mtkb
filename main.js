@@ -648,7 +648,7 @@ function resolveBrowserDataPath(directory) {
   // Resolve relative paths from the active config file's directory.
   const basePath = path.isAbsolute(expandedPath)
     ? path.resolve(expandedPath)
-    : path.resolve(__dirname, expandedPath);
+    : path.resolve(path.dirname(configPath), expandedPath);
 
   // Keep the browser profile in its own application-specific folder.
   return path.join(basePath, 'mtkb');
