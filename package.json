@@ -1,12 +1,14 @@
 {
   "name": "mtkb",
   "productName": "Multi-Tab Kiosk Browser",
+  "desktopName": "com.alexleblanc.mtkb",
   "version": "1.0.0",
   "description": "A configurable multi-tab browser for kiosk and dashboard applications",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win nsis"
+    "dist:win": "electron-builder --win nsis",
+    "dist:linux": "electron-builder --linux AppImage deb rpm"
   },
   "keywords": [
     "electron",
@@ -28,6 +30,7 @@
     "directories": {
       "output": "dist"
     },
+    "afterPack": "scripts/after-pack-linux.js",
     "files": [
       "main.js",
       "preload.js",
@@ -43,13 +46,33 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "artifactName": "mtkb-Setup-${version}.${ext}",
       "extraFiles": [
         "README.md",
         "CONFIGURATION.md",
         "DATA-AND-PRIVACY.md",
         "LICENSE"
       ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
+      "category": "Utility",
+      "maintainer": "Alex LeBlanc <62810838+alexandre-leblanc@users.noreply.github.com>",
+      "syncDesktopName": true,
+      "artifactName": "mtkb-${version}-${arch}.${ext}",
+      "extraFiles": [
+        "README.md",
+        "CONFIGURATION.md",
+        "DATA-AND-PRIVACY.md",
+        "LICENSE"
+      ]
+    },
+    "deb": {
+      "packageCategory": "utils"
     },
     "nsis": {
       "oneClick": false,
