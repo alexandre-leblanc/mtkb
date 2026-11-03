@@ -33,7 +33,8 @@ A command-line display mode overrides startup.mode in the configuration.
 Without either setting, the application starts windowed.
 `;
 
-const appArguments = process.argv.slice(2);
+const argumentStartIndex = app.isPackaged ? 1 : 2;
+const appArguments = process.argv.slice(argumentStartIndex);
 
 const showHelp = appArguments.includes('--help');
 
