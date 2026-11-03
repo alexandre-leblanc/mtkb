@@ -52,7 +52,8 @@
         "CONFIGURATION.md",
         "DATA-AND-PRIVACY.md",
         "LICENSE"
-      ]
+      ],
+      "icon": "build/icon.svg"
     },
     "linux": {
       "target": [
