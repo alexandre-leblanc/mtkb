@@ -1,8 +1,20 @@
-# Multi-Tab Kiosk Browser (MTKB)
+<p align="center">
+  <img src="assets/branding/mtkb-github-social-preview.png"
+       alt="Multi-Tab Kiosk Browser (MTKB)"
+       width="100%">
+</p>
 
-A configurable multi-tab desktop browser built with Electron for kiosk displays, wall dashboards, and dedicated information screens.
+<h1 align="center">Multi-Tab Kiosk Browser (MTKB)</h1>
 
-MTKB lets you display multiple websites in one application window, with configurable navigation, appearance, browser sessions, and kiosk behaviour.
+<p align="center">
+  <em>One screen. Multiple possibilities.</em>
+</p>
+
+<p align="center">
+  A configurable multi-tab desktop browser built with Electron for kiosk displays, wall dashboards, and dedicated information screens.
+</p>
+
+---
 
 ## Features
 
