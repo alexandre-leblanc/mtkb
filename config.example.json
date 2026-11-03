@@ -22,7 +22,7 @@
       "id": "project",
       "name": "Project",
       "url": "https://github.com/alexandre-leblanc/mtkb",
-      "localIcon": "icons/app.png",
+      "localIcon": "icons/mtkb-icon.svg",
       "iconPreference": "local",
       "allowPopups": false
     },
