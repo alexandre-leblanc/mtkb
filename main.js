@@ -699,7 +699,7 @@ function processPendingBrowserProfileReset(profilePath) {
     );
   }
 
-  console.log(`Resetting browser profile: ${profilePath}`);
+  console.log('Resetting browser profile...');
 
   fs.rmSync(profilePath, {
     recursive: true,
@@ -727,8 +727,6 @@ if (!startupError) {
       browserDataPath,
       fs.constants.R_OK | fs.constants.W_OK
     );
-
-    console.log(`Using browser profile: ${browserDataPath}`);
 
     app.setPath('sessionData', browserDataPath);
   } catch (error) {
@@ -927,6 +925,44 @@ function getActiveContents() {
   return view ? view.webContents : null;
 }
 
+function getNavigationState() {
+  const contents = getActiveContents();
+
+  if (!contents || contents.isDestroyed()) {
+    return {
+      canGoBack: false,
+      canGoForward: false
+    };
+  }
+
+  return {
+    canGoBack: contents.canGoBack(),
+    canGoForward: contents.canGoForward()
+  };
+}
+
+function sendNavigationState() {
+  if (!win || win.isDestroyed()) return;
+
+  win.webContents.send(
+    'navigation-state-updated',
+    getNavigationState()
+  );
+}
+
+function watchNavigation(contents) {
+  const update = () => {
+    if (contents.isDestroyed()) return;
+
+    if (contents === getActiveContents()) {
+      sendNavigationState();
+    }
+  };
+
+  contents.on('did-navigate', update);
+  contents.on('did-navigate-in-page', update);
+}
+
 function resizeViews() {
   if (!win || win.isDestroyed()) return;
 
@@ -992,6 +1028,8 @@ function activateTab(tabId) {
   if (win && !win.isDestroyed()) {
     win.webContents.send('zoom-level-updated', factor);
   }
+
+  sendNavigationState();
 
   return true;
 }
@@ -1526,6 +1564,7 @@ function installPopupHandler(contents, tab) {
           webContents: options.webContents
         });
         handleApplicationShortcut(popup.webContents);
+        watchNavigation(popup.webContents);
 
         installWebsiteFullscreenHandler(popup.webContents, tab);
 
@@ -1557,6 +1596,7 @@ function installPopupHandler(contents, tab) {
         stack.push(layer);
         popupStacks.set(tab.id, stack);
         applyTabZoom(tab.id);
+        sendNavigationState();
 
         // Add in this order so each new layer sits above the previous one.
         win.contentView.addChildView(overlay);
@@ -1631,6 +1671,7 @@ function installPopupHandler(contents, tab) {
           }
 
           resizeViews();
+          sendNavigationState();
         });
 
         return popup.webContents;
@@ -1759,6 +1800,7 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle('activate-tab', (_, id) => activateTab(id));
+  ipcMain.handle('get-navigation-state', () => getNavigationState());
 
   ipcMain.handle('go-back', () => {
     const contents = getActiveContents();
@@ -1844,6 +1886,7 @@ app.whenReady().then(async () => {
       }
     });
     handleApplicationShortcut(view.webContents);
+    watchNavigation(view.webContents);
 
     installWebsiteFullscreenHandler(view.webContents, tab);
 

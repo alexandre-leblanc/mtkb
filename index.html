@@ -65,6 +65,15 @@
       background: var(--nav-active-bg);
     }
 
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .nav-btn:disabled:active {
+      background: var(--nav-bg);
+    }
+
     .theme-btn, .mute-btn {
       width: 34px;
       padding: 0;
@@ -425,6 +434,11 @@
         : '<path d="M11 5 6 9H3v6h3l5 4V5Z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path>';
     }
 
+    function updateNavigationButtons({ canGoBack, canGoForward }) {
+      document.getElementById('back').disabled = !canGoBack;
+      document.getElementById('forward').disabled = !canGoForward;
+    }
+
     async function init() {
       config = await window.electronAPI.getConfig();
 
@@ -537,6 +551,12 @@
 
       document.getElementById('forward').addEventListener(
         'click', () => window.electronAPI.goForward()
+      );
+
+      window.electronAPI.onNavigationStateUpdated(updateNavigationButtons);
+
+      updateNavigationButtons(
+        await window.electronAPI.getNavigationState()
       );
 
       document.getElementById('refresh').addEventListener(

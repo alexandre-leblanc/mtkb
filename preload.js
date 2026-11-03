@@ -6,6 +6,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   activateTab: id => ipcRenderer.invoke('activate-tab', id),
   goBack: () => ipcRenderer.invoke('go-back'),
   goForward: () => ipcRenderer.invoke('go-forward'),
+  getNavigationState: () => ipcRenderer.invoke('get-navigation-state'),
+  onNavigationStateUpdated: callback => {
+    ipcRenderer.on('navigation-state-updated', (_, state) => callback(state));
+  },
   refreshTab: () => ipcRenderer.invoke('refresh-tab'),
   goHome: () => ipcRenderer.invoke('go-home'),
   getTheme: () => ipcRenderer.invoke('get-theme'),
