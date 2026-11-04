@@ -569,15 +569,103 @@ Test on additional distributions before claiming compatibility with them.
 
 ### 7.5 Publish the release
 
-After successful testing:
+The release must be built from a single, final commit on `main`. Build both
+platforms from the same version tag so the Windows and Linux packages contain
+the same source revision.
 
-1. Commit the source and documentation changes.
-2. Push the release branch.
-3. Merge the approved changes into the main branch.
-4. Create the corresponding Git tag.
-5. Publish the installer artifacts with the release.
+#### 7.5.1 Finalize and tag the release
 
-Only publish artifacts built from the final release commit.
+1. Complete the review and testing described above.
+2. Merge the approved release changes into `main`.
+3. Update the local `main` branch on both the Windows and Linux build
+   environments:
+
+   ```bash
+   git switch main
+   git fetch origin
+   git pull --ff-only origin main
+   git status --short --branch
+   git rev-parse HEAD
+   ```
+
+4. Confirm both environments report the same commit hash and have clean
+   working trees.
+5. Create an annotated tag for that commit and push it:
+
+   ```bash
+   git tag -a "v<version>" -m "MTKB v<version>"
+   git show "v<version>" --no-patch
+   git push origin "v<version>"
+   ```
+
+   Replace `<version>` with the release version, for example `1.0.0`.
+   Do not move or reuse a tag that has already been published.
+
+#### 7.5.2 Build from the release tag
+
+On each build environment, check out the same tag:
+
+```bash
+git fetch origin --tags
+git switch --detach "v<version>"
+git status --short --branch
+git rev-parse HEAD
+```
+
+Confirm the commit hash matches on both environments and matches the tagged
+release commit.
+
+Then, while still checked out at that tag:
+
+- On Windows, follow the build instructions in Section 7.2.
+- On Linux, follow the build instructions in Section 7.3.
+
+Do not modify source files or build from different commits between platforms.
+If a release build needs a source change, make and review that change on `main`,
+then create a new version tag.
+
+#### 7.5.3 Stage the release assets
+
+Copy the four tested packages into one release staging folder:
+
+- `mtkb-Setup-<version>.exe`
+- `mtkb-<version>-x86_64.AppImage`
+- `mtkb-<version>-amd64.deb`
+- `mtkb-<version>-x86_64.rpm`
+
+Generate a SHA-256 checksum file from that folder:
+
+```bash
+sha256sum mtkb-Setup-<version>.exe \
+  mtkb-<version>-x86_64.AppImage \
+  mtkb-<version>-amd64.deb \
+  mtkb-<version>-x86_64.rpm > SHA256SUMS.txt
+
+sha256sum --check SHA256SUMS.txt
+```
+
+Confirm that all four checks pass. Include `SHA256SUMS.txt` with the packages.
+
+#### 7.5.4 Create the GitHub Release
+
+1. Open the repository on GitHub and go to **Releases**.
+2. Select **Draft a new release**.
+3. Choose the existing `v<version>` tag. Do not create a different tag
+   through the release form.
+4. Set the release title to `MTKB v<version>`.
+5. Add release notes covering the changes, installation instructions,
+   tested platform compatibility, and any known limitations.
+6. Upload the four packages and `SHA256SUMS.txt`.
+7. Review the tag, title, release notes, and all five uploaded assets.
+8. Publish the release. Mark it as a pre-release only when that is
+   intentional.
+
+GitHub also provides automatically generated source-code archives. These are
+separate from the five package and checksum assets uploaded above.
+
+After publishing, revisit the release page and verify that all five assets
+are present and downloadable. Verify the published checksum file against the
+downloaded packages.
 
 ## 8. Known limitations
 
